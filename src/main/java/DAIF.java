@@ -93,7 +93,7 @@ public class DAIF {
             long time_all = 0;
             long penalty = 0;
             int time_idx = 0;
-            int test_num = 3000;
+            int test_num = 500000;
             int current_num = 0;
             int served = 0;
             //int num_can = 0;
