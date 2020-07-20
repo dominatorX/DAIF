@@ -1,5 +1,10 @@
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import javafx.util.Pair;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -255,7 +260,7 @@ public class Route {
     }
 
     int norm(Double[] x, Double[] y){
-        return (int) Math.sqrt(Math.pow(x[0]-y[0], 2)+Math.pow(x[1]-y[1], 2));
+        return (int) Math.ceil(Math.sqrt(Math.pow(x[0]-y[0], 2)+Math.pow(x[1]-y[1], 2))/10);
     }
 
     int rabound(Request request, int dis_, ArrayList<Double[]>locations){
@@ -276,6 +281,7 @@ public class Route {
             TestSame: if (arr1 + ls_now +dis_ <= request.td && this.route.get(j - 1)[5] + request.a <= this.capacity){
                 if (this.size > j) {
                     detour = dis_ + ls_now + le_next + arr1 - this.route.get(j)[2];
+                    System.out.println(le_next);
                     if (detour <= 0) return 0;
                     if (detour > this.route.get(j)[4]) break TestSame;
                 }else detour = dis_ + ls_now;
@@ -1089,4 +1095,19 @@ public class Route {
         SNM.contribution(this, SPC, false);
     }
 
+    public static void main(String[] args) throws IOException {
+        Gson gson = new Gson();
+        Route r = gson.fromJson("{\"time\":60,\"capacity\":3,\"size\":3,\"current_path\":[{\"key\":27526,\"value\":64},{\"key\":50299,\"value\":75},{\"key\":48665,\"value\":91},{\"key\":26958,\"value\":102},{\"key\":49110,\"value\":106},{\"key\":48733,\"value\":113},{\"key\":49365,\"value\":120},{\"key\":49665,\"value\":128},{\"key\":33544,\"value\":131}],\"route\":[[27526,64,64,0,6666,0],[45119,469,157,1,312,1],[28015,1950,1638,-1,312,0]]}",
+                new TypeToken<Route>() {
+                }.getType());
+        Request re = gson.fromJson("{\"ls\":45119,\"le\":53443,\"tr\":60,\"td\":531,\"p\":10890,\"a\":1}",
+                new TypeToken<Request>() {
+                }.getType());
+        int dis = 363;
+        InputStreamReader in = new InputStreamReader(new FileInputStream("NYC/ny_locations_j.json"));
+        ArrayList<Double[]> locations  = gson.fromJson(in,
+                new TypeToken<ArrayList<Double[]>>(){ }.getType());
+        in.close();
+        System.out.println(r.rabound(re, dis, locations));
+    }
 }

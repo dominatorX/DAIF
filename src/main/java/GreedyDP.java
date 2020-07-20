@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.PriorityQueue;
+import java.util.Random;
 
 public class GreedyDP {
     public static void main(String[] args) throws IOException {
@@ -40,18 +41,13 @@ public class GreedyDP {
         Grid.init(graph_file);
 
         Gson gson = new Gson();
+        Random rand = new Random();
         InputStreamReader in = new InputStreamReader(new FileInputStream(graph_file+"_locations_j.json"));
         ArrayList<Double[]> locations  = gson.fromJson(in,
                 new TypeToken<ArrayList<Double[]>>(){ }.getType());
         in.close();
 
         final int len_time_span = 900;  // 15 minute per span
-        int num_time_span = 6;  // check 1.5 hour
-        ArrayList<Integer> time_spans = new ArrayList<>();
-        int num;
-        for (num=0;num<num_time_span;num++) {
-            time_spans.add(len_time_span * num);
-        }
 
         int counter = 0;
         while (counter < date_list.size()) {
@@ -62,10 +58,9 @@ public class GreedyDP {
             in.close();
 
             ArrayList<Route> routes = new ArrayList<>(work_num);
-            // for worker_location in worker_locations[:1000]:
-            //    routes.append(Route(-10, 4, [(worker_location, -10, -10, 0)]))
             int work_idx;
-            for (work_idx = 10000; work_idx < 10000+work_num; work_idx++) {
+            int start = rand.nextInt(worker_location.size()-work_num);
+            for (work_idx = start; work_idx < start+work_num; work_idx++) {
                 Route temp = new Route();
                 ArrayList<int[]> temp_route = new ArrayList<>();
                 int[] temp_loc = {worker_location.get(work_idx)[1], -10, -10, 0, 6666, 0};
@@ -74,7 +69,7 @@ public class GreedyDP {
 
                 routes.add(temp);
             }
-            System.out.println("we have" + routes.size() + "routes");
+            System.out.println("we have " + routes.size() + " routes");
             Insertion insertor = new Insertion();
 
             long time_all = 0;
@@ -112,7 +107,8 @@ public class GreedyDP {
                 }
                 long start_assign=System.currentTimeMillis();
                 Comparator<Pair<Integer,Integer>> comp = new ShortestPathLRU.pair_com();
-                PriorityQueue<Pair<Integer, Integer>> candidate = new PriorityQueue<>(routes.size(), comp);
+                //PriorityQueue<Pair<Integer, Integer>> candidate = new PriorityQueue<>(routes.size(), comp);
+                ArrayList<Pair<Integer, Integer>> candidate = new ArrayList<>(routes.size());
 
                 int cost_final = Integer.MAX_VALUE;
                 int route_idx = -1;
@@ -123,7 +119,6 @@ public class GreedyDP {
                     if (Grid.reachable(route_.route.get(0)[0], request.ls, time_left - route_.route.get(0)[2])) {
                         route_.update(request.tr, SPC, false);
                         int bound = route_.rabound(request, SPC.dis(request.ls, request.le), locations);
-
                         if (bound == 0) {
                             Pair<Pair<Integer,Integer>,Integer> info;
                             info = insertor.Leinsertion(route_, request, SPC, dist);
@@ -142,12 +137,10 @@ public class GreedyDP {
                     }
                 }
 
-                Pair<Integer, Integer> x;
-                while (!candidate.isEmpty()){
-                    x = candidate.poll();
-                    if(-x.getKey()>=cost_final){
-                        break;
-                    }else {
+                candidate.sort(comp);
+                for (Pair<Integer, Integer> x:candidate){
+                    if(-x.getKey()>=cost_final) break;
+                    else {
                         rou_idx = x.getValue();
                         Route route_ = routes.get(rou_idx);
                         //num_check ++;
@@ -168,7 +161,8 @@ public class GreedyDP {
                 time_all += System.currentTimeMillis()-start_assign;
                 if (route_idx != -1) {
                     served += 1;
-		            //System.out.println("new insertion:");
+                    //uncomment codes belong if you want to see detours about how routes are changed after insertion
+                    //System.out.println("new insertion:");
                     //routes.get(route_idx).print_tour();
                     //int last_time = routes.get(route_idx).route.get(routes.get(route_idx).size - 1)[2];
                     routes.get(route_idx).rainsert(insert_idx[0], insert_idx[1], request, SPC, dist);

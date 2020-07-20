@@ -6,6 +6,40 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class get_info {
+    public static class Mercator {
+        final private static double R_MAJOR = 6378137.0;
+        final private static double R_MINOR = 6356752.3142;
+        final private static double amend = 1.3d;
+
+        public double[] merc(double x, double y) {
+            return new double[] {mercX(x)/amend, mercY(y)/amend};
+        }
+
+        private double  mercX(double lon) {
+            return R_MAJOR * Math.toRadians(lon);
+        }
+
+        private double mercY(double lat) {
+            if (lat > 89.5) {
+                lat = 89.5;
+            }
+            if (lat < -89.5) {
+                lat = -89.5;
+            }
+            double temp = R_MINOR / R_MAJOR;
+            double es = 1.0 - (temp * temp);
+            double eccent = Math.sqrt(es);
+            double phi = Math.toRadians(lat);
+            double sinphi = Math.sin(phi);
+            double con = eccent * sinphi;
+            double com = 0.5 * eccent;
+            con = Math.pow(((1.0-con)/(1.0+con)), com);
+            double ts = Math.tan(0.5 * ((Math.PI*0.5) - phi))/con;
+            double y = 0 - R_MAJOR * Math.log(ts);
+            return y;
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         String data_type = "./NYC/ny";
         FileReader fr1 = new FileReader(data_type+"_edge");
@@ -15,7 +49,9 @@ public class get_info {
         BufferedReader loc = new BufferedReader(new FileReader(data_type+"_location"));
         BufferedReader Yedges = new BufferedReader(new FileReader(data_type+"_edge_time"));
 
+        final double speed = 10;
         final double [] range_ = {40.51d, 40.91d, -74.26d, -73.7d};
+
         HashMap<Long,Integer> r_nodes_reverse = new HashMap<>();
         String str1,str2;
         bf2.readLine();
@@ -33,14 +69,17 @@ public class get_info {
         fr2.close();
 
         double lan,lon;
+        Mercator transfer = new Mercator();
 
-        ArrayList<ArrayList<Double>> lalo2id = new ArrayList<>(total_nodes);
+        ArrayList<double[]> lalo2id = new ArrayList<>(total_nodes);
+        ArrayList<double[]> meter2id = new ArrayList<>(total_nodes);
         int [] node2region = new int[total_nodes];
         HashMap<Integer, HashSet<Integer>> region2node = new HashMap <>();
         HashSet<Integer> region = new HashSet<>();
         int i;
         for (i=0;i<total_nodes;i++){
-            lalo2id.add(new ArrayList<>(2));
+            lalo2id.add(new double[]{0d, 0d});
+            meter2id.add(new double[]{0d, 0d});
         }
         while ((str1 = loc.readLine()) != null) {
 
@@ -57,7 +96,8 @@ public class get_info {
             diff1 = (int)((lan-range_[0])*50);
             diff2 = (int)((lon-range_[2])*50);
             int area = diff1*28 + diff2;
-            lalo2id.set(id,temp);
+            lalo2id.set(id,new double[]{lan,lon});
+            meter2id.set(id,transfer.merc(lon, lan));
             node2region[id] = area;
             region.add(area);
             if (region2node.get(area)==null){
@@ -77,7 +117,9 @@ public class get_info {
             int des = r_nodes_reverse.get(Long.parseLong(str1.split(",")[1]));
             Edge.add(source);
             Edge.add(des);
-            int weight = (int)(Double.parseDouble(str1.split(",")[4])*60);
+            //int weight = (int)(Double.parseDouble(str1.split(",")[4])*60);
+            int weight = (int)Math.ceil(Double.parseDouble(str1.split(",")[4])*60d);
+            // a real metric map
             if (weight==0){
                 Edge.add(1);
             }else {
@@ -114,7 +156,7 @@ public class get_info {
         out.write(jsonObject, 0, jsonObject.length());
         out.close();
 
-        System.out.print("finish saving dictionary");
+        System.out.println("finish saving dictionary");
 
         jsonObject = gson.toJson(lalo2id);
         out = new OutputStreamWriter(new FileOutputStream(data_type+"_rtree_j.json"));
@@ -126,12 +168,12 @@ public class get_info {
         out.write(jsonObject, 0, jsonObject.length());
         out.close();
 
-        jsonObject = gson.toJson(lalo2id);
+        jsonObject = gson.toJson(meter2id);
         out = new OutputStreamWriter(new FileOutputStream(data_type+"_locations_j.json"));
         out.write(jsonObject, 0, jsonObject.length());
         out.close();
-        System.out.print("1.finish saving graph");
 
+        System.out.println("1.finish saving graph");
         int n = lalo2id.size();	//number of vertices in the graph.
 
         CHSP.Vertex[] graph = new CHSP.Vertex[n];
@@ -162,7 +204,7 @@ public class get_info {
         out.write(jsonObject, 0, jsonObject.length());
         out.close();
 
-        System.out.print("2.finish generating CH graph");
+        System.out.println("2.finish generating CH graph");
 
         BiSP.Vertex [] bi_graph = new BiSP.Vertex[n];
         BiSP.Vertex [] reverseGraph = new BiSP.Vertex[n];
@@ -216,6 +258,6 @@ public class get_info {
         out.write(jsonObject, 0, jsonObject.length());
         out.close();
 
-        System.out.print("3.finish generating Bi graph");
+        System.out.println("3.finish generating Bi graph");
     }
 }

@@ -3,10 +3,7 @@ import com.google.gson.reflect.TypeToken;
 import javafx.util.Pair;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class DAIF {
     public static void main(String[] args) throws IOException {
@@ -44,6 +41,7 @@ public class DAIF {
         Grid.init(graph_file);
 
         Gson gson = new Gson();
+        Random rand = new Random();
         InputStreamReader in = new InputStreamReader(new FileInputStream(graph_file+"_regions_j.json"));
         HashSet<Integer> regions  = gson.fromJson(in,
                 new TypeToken<HashSet<Integer>>(){ }.getType());
@@ -74,10 +72,9 @@ public class DAIF {
             in.close();
 
             ArrayList<Route> routes = new ArrayList<>(work_num);
-            // for worker_location in worker_locations[:1000]:
-            //    routes.append(Route(-10, 4, [(worker_location, -10, -10, 0)]))
             int work_idx;
-            for (work_idx = 10000; work_idx < 10000+work_num; work_idx++) {
+            int start = rand.nextInt(worker_location.size()-work_num);
+            for (work_idx = start; work_idx < start+work_num; work_idx++) {
                 Route temp = new Route();
                 ArrayList<int[]> temp_route = new ArrayList<>();
                 int[] temp_loc = {worker_location.get(work_idx)[1], -10, -10, 0, 6666, 0};
@@ -94,9 +91,9 @@ public class DAIF {
             Insertion insertor = new Insertion();
 
             long time_all = 0;
-	        int penalty = 0;
+            long penalty = 0;
             int time_idx = 0;
-            int test_num = 500000;
+            int test_num = 3000;
             int current_num = 0;
             int served = 0;
             //int num_can = 0;
@@ -107,7 +104,6 @@ public class DAIF {
                     new TypeToken<ArrayList<int[]>>() {
                     }.getType());
             in.close();
-            //long starTime=System.currentTimeMillis();
             for (int[] request_info : request_list) {
                 int dist = SPC.dis(request_info[1], request_info[2]);
                 if (dist == -1) {
@@ -134,9 +130,9 @@ public class DAIF {
                 }
                 long start_assign=System.currentTimeMillis();
                 Comparator<Pair<Integer,Integer>> comp = new ShortestPathLRU.pair_com();
-                PriorityQueue<Pair<Integer, Integer>> candidate = new PriorityQueue<>(routes.size(), comp);
+                ArrayList<Pair<Integer, Integer>> candidate = new ArrayList<>(routes.size());
 
-                double cost_final = Double.MAX_VALUE;
+                double cost_final = Integer.MAX_VALUE-1;
                 int route_idx = -1;
                 int[] insert_idx = {-1, -1};
                 int rou_idx;
@@ -170,16 +166,16 @@ public class DAIF {
                                 }
                             }
                         }
-                        if (bound < cost_final) candidate.add(new Pair<>(-bound, rou_idx));
+                        else if (bound < cost_final) candidate.add(new Pair<>(-bound, rou_idx));
                     }
                 }
                 //num_can += candidate.size();
-                Pair<Integer, Integer> x;
-                while (!candidate.isEmpty()){
-                    x = candidate.poll();
-                    if(-x.getKey()>=cost_final){
-                        break;
-                    }else {
+
+                candidate.sort(comp);
+
+                for (Pair<Integer, Integer>x:candidate){
+                    if(-x.getKey()>=cost_final) break;
+                    else {
                         rou_idx = x.getValue();
                         Route route_ = routes.get(rou_idx);
                         //num_check ++;
@@ -206,6 +202,7 @@ public class DAIF {
                 time_all += System.currentTimeMillis()-start_assign;
                 if (route_idx != -1) {
                     served += 1;
+                    //uncomment codes belong if you want to see detours about how routes are changed after insertion
                     //System.out.println("new insertion:");
                     //routes.get(route_idx).print_tour();
                     int last_time = routes.get(route_idx).route.get(routes.get(route_idx).size - 1)[2];
@@ -224,12 +221,8 @@ public class DAIF {
                 }
                 current_num ++;
             }
-            //long endTime=System.currentTimeMillis();
-            //long Time=endTime-starTime;
-            //System.out.println("time cost = "+Time);
             save = "using "+time_all +" to assign " + current_num + " requests, " + served + " served, " + date_list.get(counter) + " penalty is " + penalty+"\n";
             System.out.print(save);
-            //System.out.println("total candidates "+num_can+", total check "+num_check);
             counter += 1;
         }
     }

@@ -24,9 +24,12 @@ Run:    mvn compile exec:java -Dexec.mainClass="DAIF-DP" -Dexec.args="DP |W|  1+
 Run:    mvn compile exec:java -Dexec.mainClass="DAIF" -Dexec.args="DP 3000 1.3 3"
 
 
-Default dataset is NYC, if you want to run synthetic data, open DAIF.java or GreedyDP.java and change: data_file from "./NYC/ny" to "./NYC/syn", 
-date_list.add from "02" (02 means Dec. 2rd) to "" (synthetic data has no date), and 
-DNM initalized with "_DNM.json" instead of "_DNM02.json". 
+Default dataset is NYC, if you want to run synthetic data, open DAIF.java or GreedyDP.java and change: data_file from    "./NYC/ny" 
+                   to    "./NYC/syn"      
+date_list.add from        "02"          (02 means Dec. 2rd) 
+                         to          ""             (synthetic data has no date), and 
+DNM initalized with       "_DNM.json" 
+               instead of       "_DNM02.json" 
 
 
 Below are the steps to set up based on new datasets. 
@@ -63,3 +66,16 @@ Demand Number Map             with format of "NYC/ny_DNM02.json"
 Note: if you have error:    
 	error: invalid target release: 12
 please change the pom.xml according to your jdk version.
+
+
+--------------------------------------------------------------------------------------------
+Update on 20/07/2020:
+Previously the results with/without prune are different as:
+SHARE's dataset does not follow: Euclidean distance <= Road length.
+We add a new preprocessor, outputing edges strictly follows Euclidean distance <= Road length.
+You can replace the step 2 with:
+
+----------for basic graph generation-----------------------------
+2.Run:       mvn compile exec:java -Dexec.mainClass="get_info_euc"
+
+and run 3-5. Outputs are the same if you close pruning function. 
